@@ -91,20 +91,35 @@ const generateContentWithFallback = async (
             return response;
 
         } catch (error: any) {
-             const status = error.status || 500;
-             const isQuota = status === 429 || error.message?.includes('429') || error.message?.includes('quota');
+             const status = error.status || error.code || 500;
+             const message = typeof error.message === "string" ? error.message : String(error.message ?? "");
+             const text = message || JSON.stringify(error);
+             
+             const isGlobalQuotaExhausted =
+               text.includes("limit: 0") ||
+               text.includes("GenerateRequestsPerDayPerProjectPerModel-FreeTier");
+             
+             if (isGlobalQuotaExhausted) {
+                 console.error("[GeminiService] Global project quota exhausted. Not retrying with other keys.");
+                 throw error;
+             }
+
+             const isQuota =
+               status === 429 ||
+               text.includes("429") ||
+               text.toLowerCase().includes("quota");
              const isServer = status >= 500 && status < 600;
              
-             // Only retry on Quota or Server errors
+             // Only retry on per-key Quota errors or transient Server errors
              if (isQuota || isServer) {
-                 const keyMasked = apiKey ? `...${apiKey.slice(-4)}` : 'Unknown';
+                 const keyMasked = apiKey ? `...${apiKey.slice(-4)}` : "Unknown";
                  console.warn(`[GeminiService] Key ${keyMasked} failed (${status}). Switching to next key...`);
                  lastError = error;
                  continue; // Proceed to next key in loop
              }
              
              // If it's a client error (e.g., 400 Invalid Argument), fail fast.
-             console.error(`[GeminiService] Non-retriable error: ${error.message}`);
+             console.error(`[GeminiService] Non-retriable error: ${message}`);
              throw error;
         }
     }
@@ -118,7 +133,8 @@ const generateContentWithFallback = async (
 
 // 1. Supervisor: Create Initial Plan
 export const createSupervisorPlan = async (userQuery: string, prompts: AgentPrompts): Promise<{ tasks: Task[], usage: number, prompt: string }> => {
-    const modelId = "gemini-3-pro-preview";
+    const modelId = "gemini-3-flash-preview
+-preview";
     
     const systemInstruction = prompts[AgentRole.SUPERVISOR];
     const fullPrompt = `${systemInstruction}\n\nUser Request: "${userQuery}"\n\nReturn a JSON array of tasks.`;
@@ -175,7 +191,8 @@ export const updateSupervisorPlan = async (
     remainingTasks: Task[],
     prompts: AgentPrompts
 ): Promise<{ tasks: any[], usage: number, prompt: string }> => {
-    const modelId = "gemini-3-pro-preview";
+    const modelId = "gemini-3-flash-preview
+-preview";
 
     // Strict Scope Control
     // We limit new additions strictly to prevent runaway scope expansion.
@@ -248,7 +265,8 @@ export const executeAgentTask = async (
     prompts: AgentPrompts
 ): Promise<{ text: string; sources?: string[]; usage: number; prompt: string }> => {
     
-    let model = "gemini-3-pro-preview";
+    let model = "gemini-3-flash-preview
+-preview";
     let tools = [];
     
     // Model Selection
@@ -256,7 +274,8 @@ export const executeAgentTask = async (
         model = "gemini-3-flash-preview"; 
         tools = [{ googleSearch: {} }];
     } else if (agent === AgentRole.CODER) {
-        model = "gemini-3-pro-preview";
+        model = "gemini-3-flash-preview
+-preview";
     }
 
     const systemInstruction = prompts[agent];
@@ -313,7 +332,8 @@ export const superviseFinalOutput = async (context: string, prompts: AgentPrompt
 
      try {
          const response = await generateContentWithFallback({
-            model: "gemini-3-pro-preview",
+            model: "gemini-3-flash-preview
+-preview",
             contents: fullPrompt,
          }, AgentRole.SUPERVISOR);
          

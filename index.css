@@ -1,0 +1,9 @@
+/* Local stylesheet to avoid 404 in index.html.
+ * Tailwind utilities are still provided via the CDN script.
+ * Add any custom global styles here as needed.
+ */
+
+body {
+  margin: 0;
+}
+
