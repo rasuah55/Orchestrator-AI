@@ -3,15 +3,48 @@ import { AgentRole, Task, AgentPrompts } from "../types";
 
 // --- API CONFIGURATION ---
 
-// Hardcoded API Keys as requested
-const API_KEYS: Record<AgentRole, string> = {
-  [AgentRole.SUPERVISOR]: "AIzaSyDcYjKunrE-ID2qKI6Dgw7IIMeN5vOmmLA",
-  [AgentRole.CODER]: "AIzaSyDcYjKunrE-ID2qKI6Dgw7IIMeN5vOmmLA",
-  [AgentRole.WRITER]: "AIzaSyD1gMslkoJSyzD3NmhthYnpNhbZPbqSDqs",
-  [AgentRole.RESEARCHER]: "AIzaSyCww7huu8bjIGV8Tg8Pw2OEydOaQTI_O8o",
-  [AgentRole.ANALYST]: "AIzaSyCrnlU-EPM8f8mPbDMafx8ucQKRoqh1nUg",
-  [AgentRole.EDITOR]: "AIzaSyAuiBXfI_Y4dS9a21EzpLaZoZCC3MHumbQ"
+const parseKeyList = (raw?: string): string[] =>
+  raw
+    ?.split(",")
+    .map((key) => key.trim())
+    .filter(Boolean) || [];
+
+// Role-specific keys take precedence; fallback to shared pool (comma-separated).
+const roleScopedKeys: Record<AgentRole, string | undefined> = {
+  [AgentRole.SUPERVISOR]: import.meta.env.VITE_GEMINI_API_KEY_SUPERVISOR,
+  [AgentRole.CODER]: import.meta.env.VITE_GEMINI_API_KEY_CODER,
+  [AgentRole.WRITER]: import.meta.env.VITE_GEMINI_API_KEY_WRITER,
+  [AgentRole.RESEARCHER]: import.meta.env.VITE_GEMINI_API_KEY_RESEARCHER,
+  [AgentRole.ANALYST]: import.meta.env.VITE_GEMINI_API_KEY_ANALYST,
+  [AgentRole.EDITOR]: import.meta.env.VITE_GEMINI_API_KEY_EDITOR,
 };
+
+const sharedKeys = [
+  import.meta.env.VITE_GEMINI_API_KEY,
+  ...parseKeyList(import.meta.env.VITE_GEMINI_API_KEYS),
+].filter(Boolean);
+
+const API_KEYS: Record<AgentRole, string> = {
+  [AgentRole.SUPERVISOR]: roleScopedKeys[AgentRole.SUPERVISOR] || sharedKeys[0] || "",
+  [AgentRole.CODER]: roleScopedKeys[AgentRole.CODER] || sharedKeys[0] || "",
+  [AgentRole.WRITER]: roleScopedKeys[AgentRole.WRITER] || sharedKeys[0] || "",
+  [AgentRole.RESEARCHER]: roleScopedKeys[AgentRole.RESEARCHER] || sharedKeys[0] || "",
+  [AgentRole.ANALYST]: roleScopedKeys[AgentRole.ANALYST] || sharedKeys[0] || "",
+  [AgentRole.EDITOR]: roleScopedKeys[AgentRole.EDITOR] || sharedKeys[0] || "",
+};
+
+const keyPool = Array.from(
+  new Set([
+    ...Object.values(API_KEYS),
+    ...sharedKeys,
+  ].filter(Boolean))
+);
+
+if (keyPool.length === 0) {
+  throw new Error(
+    "No Gemini API keys configured. Set VITE_GEMINI_API_KEY, VITE_GEMINI_API_KEYS (comma-separated), or role-specific VITE_GEMINI_API_KEY_<ROLE> values in your .env file."
+  );
+}
 
 // --- ROBUST API CALLER ---
 
@@ -32,10 +65,8 @@ const generateContentWithFallback = async (
     preferredRole: AgentRole
 ): Promise<any> => {
     // 1. Determine Key Priority
-    const primaryKey = API_KEYS[preferredRole];
-    // Create a pool of backup keys (unique, excluding the primary)
-    const allKeys = Object.values(API_KEYS);
-    const backupKeys = Array.from(new Set(allKeys.filter(k => k !== primaryKey)));
+    const primaryKey = API_KEYS[preferredRole] || keyPool[0];
+    const backupKeys = keyPool.filter((k) => k !== primaryKey);
     
     // The order of execution: Primary -> Backup 1 -> Backup 2...
     const executionOrder = [primaryKey, ...backupKeys];
