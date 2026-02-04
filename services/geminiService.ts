@@ -133,8 +133,7 @@ const generateContentWithFallback = async (
 
 // 1. Supervisor: Create Initial Plan
 export const createSupervisorPlan = async (userQuery: string, prompts: AgentPrompts): Promise<{ tasks: Task[], usage: number, prompt: string }> => {
-    const modelId = "gemini-3-flash-preview
--preview";
+    const modelId = "gemini-3-flash-preview";
     
     const systemInstruction = prompts[AgentRole.SUPERVISOR];
     const fullPrompt = `${systemInstruction}\n\nUser Request: "${userQuery}"\n\nReturn a JSON array of tasks.`;
@@ -191,8 +190,7 @@ export const updateSupervisorPlan = async (
     remainingTasks: Task[],
     prompts: AgentPrompts
 ): Promise<{ tasks: any[], usage: number, prompt: string }> => {
-    const modelId = "gemini-3-flash-preview
--preview";
+    const modelId = "gemini-3-flash-preview";
 
     // Strict Scope Control
     // We limit new additions strictly to prevent runaway scope expansion.
@@ -265,8 +263,7 @@ export const executeAgentTask = async (
     prompts: AgentPrompts
 ): Promise<{ text: string; sources?: string[]; usage: number; prompt: string }> => {
     
-    let model = "gemini-3-flash-preview
--preview";
+    let model = "gemini-3-flash-preview";
     let tools = [];
     
     // Model Selection
@@ -274,8 +271,7 @@ export const executeAgentTask = async (
         model = "gemini-3-flash-preview"; 
         tools = [{ googleSearch: {} }];
     } else if (agent === AgentRole.CODER) {
-        model = "gemini-3-flash-preview
--preview";
+        model = "gemini-3-flash-preview";
     }
 
     const systemInstruction = prompts[agent];
@@ -332,8 +328,7 @@ export const superviseFinalOutput = async (context: string, prompts: AgentPrompt
 
      try {
          const response = await generateContentWithFallback({
-            model: "gemini-3-flash-preview
--preview",
+            model: "gemini-3-flash-preview",
             contents: fullPrompt,
          }, AgentRole.SUPERVISOR);
          
