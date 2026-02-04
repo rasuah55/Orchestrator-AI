@@ -1,0 +1,5 @@
+{
+  "name": "Orchestrator AI",
+  "description": "An agentic workflow tool where a Supervisor AI plans, assigns, and manages a team of specialized agents (Researcher, Analyst, Writer, etc.) to complete complex tasks with user-defined rate limiting and timers.",
+  "requestFramePermissions": []
+}
